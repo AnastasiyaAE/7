@@ -35,19 +35,36 @@ public class LoginCourierTest {
         }
     }
 
-    /*@Before
-    @Step("Set up test environment")
-    public void setUp() {
-        RestAssured.baseURI = "https://qa-scooter.praktikum-services.ru/";
-        gson = new GsonBuilder().setPrettyPrinting().create(); // Инициализация gson
-    }*/
 
     // С вынесенным URI в отдельный класс
     @Before
     public void setUp() {
         RestAssured.baseURI = ApiConstants.BASE_URI;
-        gson = new GsonBuilder().setPrettyPrinting().create(); // Инициализация gson
+        gson = new GsonBuilder().setPrettyPrinting().create();
+        login = "ivanov";
+        password = "1234";
     }
+
+    @Step("Create courier with login: {login}, password: {password}, firstName: {firstName}")
+    public Response createCourier(String login, String password, String firstName) {
+        String body = "{ \"login\": \"" + login + "\", \"password\": \"" + password + "\", \"firstName\": \"" + firstName + "\" }";
+        return RestAssured.given()
+                .header("Content-Type", "application/json")
+                .body(body)
+                .when()
+                .post("/api/v1/courier");
+    }
+
+    @Step("Login courier with login: {login}, password: {password}")
+    public Response loginCourier(String login, String password) {
+        String body = "{ \"login\": \"" + login + "\", \"password\": \"" + password + "\" }";
+        return RestAssured.given()
+                .header("Content-Type", "application/json")
+                .body(body)
+                .when()
+                .post("/api/v1/courier/login");
+    }
+
 
     // Курьер может авторизоваться
     // Для авторизации нужно передать все обязательные поля
@@ -56,28 +73,13 @@ public class LoginCourierTest {
     @DisplayName("Courier can be created and login")
     @Step("Create courier and verify login")
     public void testCourierCanBeCreatedAndLogin() {
-        // Данные для создания курьера
-        String login = "ivanov";
-        String password = "1234";
-        String body = "{ \"login\": \"" + login + "\", \"password\": \"" + password + "\", \"firstName\": \"ivan\" }";
-        // Отправляем запрос на создание курьера
-        Response createResponse = RestAssured.given()
-                .header("Content-Type", "application/json")
-                .body(body)
-                .when()
-                .post("/api/v1/courier");
-        // Проверяем код ответа на создание курьера
+
+        Response createResponse = createCourier(login, password, "ivan");
         assertThat(createResponse.getStatusCode(), is(201));
+
         System.out.println("Курьер успешно создан. Код ответа: " + createResponse.getStatusCode());
         // Данные для авторизации
-        String loginBody = "{ \"login\": \"qazhof\", \"password\": \"1234\" }";
-        // Отправляем запрос на авторизацию курьера
-        Response loginResponse = RestAssured.given()
-                .header("Content-Type", "application/json")
-                .body(loginBody)
-                .when()
-                .post("/api/v1/courier/login");
-        // Проверяем код ответа на авторизацию
+        Response loginResponse = loginCourier(login, password);
         assertThat(loginResponse.getStatusCode(), is(200));
         // Проверяем, что ответ содержит id
         assertThat(loginResponse.jsonPath().get("id"), is(notNullValue()));
@@ -90,102 +92,52 @@ public class LoginCourierTest {
         assertThat(courierId, is(not(-1))); // Что ID не -1
     }
 
-    // Тест что система вернёт ошибку, если неправильно указать логин или пароль
+    // Тест что система вернёт ошибку, если неправильно указать логин
     @Test
-    @DisplayName("Login with wrong credentials should fail")
-    @Step("Test courier login with wrong credentials")
-    public void testWithWrongLoginOrPasswordCourier() {
-        // Данные для создания курьера
-        String login = "ivanov";
-        String password = "1234";
-        String body = "{ \"login\": \"" + login + "\", \"password\": \"" + password + "\", \"firstName\": \"ivan\" }";
-        // Отправляем запрос на создание курьера
-        Response createResponse = RestAssured.given()
-                .header("Content-Type", "application/json")
-                .body(body)
-                .when()
-                .post("/api/v1/courier");
-        // Проверяем код ответа на создание курьера
-        assertThat(createResponse.getStatusCode(), is(201));
-        System.out.println("Курьер создан. Код ответа: " + createResponse.getStatusCode());
+    @DisplayName("Login with wrong login should fail")
+    @Step("Test courier login with wrong login")
+    public void testWithWrongLoginCourier() {
+        createCourier(login, password, "ivan");
 
-        // Тест 1: Неверный логин и пароль
-        String bodyWrongCredentials = "{ \"login\": \"wrongUser\", \"password\": \"2222\" }";
-        Response responseWrongCredentials = RestAssured.given()
-                .header("Content-Type", "application/json")
-                .body(bodyWrongCredentials)
-                .when()
-                .post("/api/v1/courier/login");
+        Response createResponse = loginCourier("wrongUser", password);
+
         // Проверяем код ответа и сообщение
-        assertThat(responseWrongCredentials.getStatusCode(), is(404));
-        assertThat(responseWrongCredentials.jsonPath().getString("message"), is("Учетная запись не найдена"));
+        assertThat(loginResponse.getStatusCode(), is(404));
+        assertThat(loginResponse.jsonPath().getString("message"), is("Учетная запись не найдена"));
         // Вывод на экран для неверных учетных данных
         System.out.println("Wrong login and password:");
-        System.out.println("Response Code: " + responseWrongCredentials.getStatusCode());
-        System.out.println("Response Body: " + responseWrongCredentials.asString());
+        System.out.println("Response Code: " + loginResponse.getStatusCode());
+        System.out.println("Response Body: " + loginResponse.asString());
 
-        // Тест 2: Неверный логин
-        String bodyWrongLogin = "{ \"login\": \"wrongUser\", \"password\": \"1234\" }";
-        Response responseWrongLogin = RestAssured.given()
-                .header("Content-Type", "application/json")
-                .body(bodyWrongLogin)
-                .when()
-                .post("/api/v1/courier/login");
-        // Проверяем код ответа и сообщение
-        assertThat(responseWrongLogin.getStatusCode(), is(404));
-        assertThat(responseWrongLogin.jsonPath().getString("message"), is("Учетная запись не найдена"));
-        // Вывод на экран для неверного логина
-        System.out.println("Wrong login:");
-        System.out.println("Response Code: " + responseWrongLogin.getStatusCode());
-        System.out.println("Response Body: " + responseWrongLogin.asString());
+        // Тест: Неверный пароль
+        @Test
+        @DisplayName("Login with wrong password should fail")
+        @Step("Test courier login with wrong password")
+        public void testWithWrongPasswordCourier () {
+            createCourier(login, password, "ivan");
+            Response loginResponse = loginCourier(login, "wrongPassword");
 
-        // Тест 3: Неверный пароль
-        String bodyWrongPassword = "{ \"login\": \"ivanov\", \"password\": \"2222\" }"; // Существующий логин
-        Response responseWrongPassword = RestAssured.given()
-                .header("Content-Type", "application/json")
-                .body(bodyWrongPassword)
-                .when()
-                .post("/api/v1/courier/login");
-        // Проверяем код ответа и сообщение
-        assertThat(responseWrongPassword.getStatusCode(), is(404));
-        assertThat(responseWrongPassword.jsonPath().getString("message"), is("Учетная запись не найдена"));
-        // Вывод на экран для неверного пароля
-        System.out.println("Wrong password:");
-        System.out.println("Response Code: " + responseWrongPassword.getStatusCode());
-        System.out.println("Response Body: " + responseWrongPassword.asString());
-        // Авторизуемся, чтобы получить ID курьера
-        courierId = courierHelper.getCourierId(login, password); // Сохраняем ID курьера
-        // Проверяем что ID курьера получен корректно
-        assertThat(courierId, is(not(-1))); // Что ID не -1
-    }
-
-    // Тест если какого-то поля нет, запрос возвращает ошибку
-    // *Тест не проходит: при отсутствии поля password = баг*
-    @Test
-    @DisplayName("Missing required fields returns error")
-    @Step("Test missing login or password during courier login")
-    public void testMissingRequiredFieldsCourier() {
-        // Данные для создания курьера
-        String login = "ivanov";
-        String password = "1234";
-        String body = "{ \"login\": \"" + login + "\", \"password\": \"" + password + "\", \"firstName\": \"ivan\" }";
-        // Отправляем запрос на создание курьера
-        Response createResponse = RestAssured.given()
-                .header("Content-Type", "application/json")
-                .body(body)
-                .when()
-                .post("/api/v1/courier");
-        // Проверяем код ответа на создание курьера
-        assertThat(createResponse.getStatusCode(), is(201));
-        System.out.println("Курьер успешно создан. Код ответа: " + createResponse.getStatusCode());
-        // Включаем авторизацию и получение ID курьера
-        try {
+            // Проверяем код ответа и сообщение
+            assertThat(loginResponse.getStatusCode(), is(404));
+            assertThat(loginResponse.jsonPath().getString("message"), is("Учетная запись не найдена"));
+            // Вывод на экран для неверного пароля
+            System.out.println("Wrong password:");
+            System.out.println("Response Code: " + loginResponse.getStatusCode());
+            System.out.println("Response Body: " + loginResponse.asString());
             // Авторизуемся, чтобы получить ID курьера
             courierId = courierHelper.getCourierId(login, password); // Сохраняем ID курьера
-            // Проверяем, что ID курьера получен корректно
+            // Проверяем что ID курьера получен корректно
             assertThat(courierId, is(not(-1))); // Что ID не -1
+        }
 
-            // Тест 1: Отсутствует поле "login"
+        // Тест если какого-то поля нет, запрос возвращает ошибку
+        // *Тест не проходит: при отсутствии поля password = баг*
+        @Test
+        @DisplayName("Missing required fields returns error")
+        @Step("Test missing login during courier login")
+        public void testMissingLoginFieldsCourier () {
+            createCourier(login, password, "ivan");
+
             String bodyWithoutLogin = "{ \"password\": \"1234\" }";
             Response responseWithoutLogin = RestAssured.given()
                     .header("Content-Type", "application/json")
@@ -198,8 +150,14 @@ public class LoginCourierTest {
             assertThat(responseWithoutLogin.getStatusCode(), is(400));
             assertThat(responseWithoutLogin.jsonPath().getString("message"), is(expectedMessage));
             System.out.println("Тест на отсутствие логина. Код ответа: " + responseWithoutLogin.getStatusCode());
+        }
+        // Тест 2: Отсутствует поле "password"
+        @Test
+        @DisplayName("Missing password field returns error")
+        @Step("Test missing password during courier login")
+        public void testMissingPasswordFieldCourier () {
+            createCourier(login, password, "ivan");
 
-            // Тест 2: Отсутствует поле "password"
             String bodyWithoutPassword = "{ \"login\": \"ivanov\" }"; // Существующий логин
             Response responseWithoutPassword = RestAssured.given()
                     .header("Content-Type", "application/json")
@@ -210,7 +168,7 @@ public class LoginCourierTest {
             assertThat(responseWithoutPassword.getStatusCode(), is(400));
             assertThat(responseWithoutPassword.jsonPath().getString("message"), is(expectedMessage));
             System.out.println("Тест на отсутствие пароля. Код ответа: " + responseWithoutPassword.getStatusCode());
-        } finally {
+        } finally{
             // Проверяем, был ли курьер создан и авторизован
             if (courierId != -1) {
                 // Удаляем курьера
@@ -231,25 +189,4 @@ public class LoginCourierTest {
         }
     }
 
-    // Тест если авторизоваться под несуществующим пользователем, запрос возвращает ошибку
-    @Test
-    @DisplayName("Login non-existent user returns error")
-    @Step("Test login for non-existent courier")
-    public void testLoginNonExistentUser() {
-        // Данные для авторизации с несуществующим пользователем
-        String bodyNonExistentUser = "{ \"login\": \"YYYYY\", \"password\": \"55555\" }";
-        // Отправляем запрос на авторизацию
-        Response response = RestAssured.given()
-                .header("Content-Type", "application/json")
-                .body(bodyNonExistentUser)
-                .when()
-                .post("/api/v1/courier/login");
-        // Проверяем код ответа и сообщение
-        assertThat(response.getStatusCode(), is(404));
-        assertThat(response.jsonPath().getString("message"), is("Учетная запись не найдена"));
-        // Вывод на экран: код ответа и тело ответа в формате JSON
-        System.out.println("Not existent user login:");
-        System.out.println("Response Code: " + response.getStatusCode());
-        System.out.println("Response Body: " + response.asString());
-    }
 }

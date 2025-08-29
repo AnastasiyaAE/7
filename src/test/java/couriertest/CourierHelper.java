@@ -9,6 +9,8 @@ import io.restassured.response.Response;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.core.Is.is;
 import static org.hamcrest.core.IsNot.not;
+import java.util.HashMap;
+import java.util.Map;
 
 public class CourierHelper {
     private Gson gson;
@@ -30,12 +32,15 @@ public class CourierHelper {
         assertThat(response.jsonPath().getString("message"), is(expectedMessage));
     }
 
-    public String createRequestBody(String login, String password, String firstName) {
-        return "{ \"login\": \"" + login + "\", \"password\": \"" + password + "\", \"firstName\": \"" + firstName + "\" }";
-    }
+    public Map<String, String> createRequestBody(String login, String password, String firstName) {
+        Map<String, String> requestBody = new HashMap<>();
+        requestBody.put("login", login);
+        requestBody.put("password", password);
+        requestBody.put("firstName", firstName);
+        return requestBody;
 
     @Step("create courier")
-    public Response createCourier(String body) {
+    public Response createCourier(Map<String, String> body) {
         return RestAssured.given()
                 .header("Content-Type", "application/json")
                 .body(body)
@@ -50,9 +55,13 @@ public class CourierHelper {
     }
 
     public int getCourierId(String login, String password) {
+            Map<String, String> requestBody = new HashMap<>();
+            requestBody.put("login", login);
+            requestBody.put("password", password);
+
         Response response = RestAssured.given()
                 .header("Content-Type", "application/json")
-                .body("{ \"login\": \"" + login + "\", \"password\": \"" + password + "\" }")
+                .body(requestBody)
                 .when()
                 .post("/api/v1/courier/login");
 
