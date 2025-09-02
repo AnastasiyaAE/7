@@ -9,6 +9,7 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
+
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
@@ -52,7 +53,7 @@ public class CourierTest {
     @Description("Verify that creating a new courier is possible and returns the correct response")
     public void testCreateCourierIsPossible() {
 
-        Response response = ourierHelper.createCourier(login, password, firstName);
+        Response response = сourierHelper.createCourier(login, password, firstName);
         courierHelper.assertCourierCreatedSuccessfully(response);
         courierId = courierHelper.getCourierId(login, password);
 
@@ -139,10 +140,8 @@ public class CourierTest {
     @Severity(SeverityLevel.CRITICAL)
     @Description("Verify that creating a courier without a login returns an error")
     public void testCreateCourierWithoutLogin() {
-        String bodyWithoutLogin = "{ \"password\": \"1234\", \"firstName\": \"ivan\" }";
+        Response response = courierHelper.createCourier(null, password, firstName);
         String expectedMessage = "Недостаточно данных для создания учетной записи";
-
-        Response response = new CourierClient().createCourier(bodyWithoutLogin);
         courierHelper.printResponse(response, gson);
         assertThat(response.getStatusCode(), is(400));
         System.out.println("Курьер не создан: пропущено поле login");
@@ -156,11 +155,8 @@ public class CourierTest {
     @Severity(SeverityLevel.CRITICAL)
     @Description("Verify that creating a courier without a password returns an error")
     public void testCreateCourierWithoutPassword() {
-               String bodyWithoutPassword = "{ \"login\": \"" + login + "\", \"firstName\": \"ivan\" }";
-
+        Response response = courierHelper.createCourier(login, null, firstName);
         String expectedMessage = "Недостаточно данных для создания учетной записи";
-        Response response = new CourierClient().createCourier(bodyWithoutPassword);
-
         courierHelper.printResponse(response, gson);
         assertThat(response.getStatusCode(), is(400));
         System.out.println("Курьер не создан: пропущено поле password");
@@ -175,11 +171,10 @@ public class CourierTest {
     @Description("Verify that creating a courier without a first name returns an error")
     public void testCreateCourierWithoutFirstName() {
 
-        String bodyWithoutFirstName = "{ \"login\": \"" + login + "\", \"password\": \"1234\" }";
+        Response response = courierHelper.createCourier(login, password, null);
         // Сообщение об ошибке
         String expectedMessage = "Недостаточно данных для создания учетной записи";
         Response response = new CourierClient().createCourier(bodyWithoutFirstName);
-
         courierHelper.printResponse(response, gson);
         assertThat(response.getStatusCode(), is(400));
         System.out.println("Курьер не создан: пропущено поле firstName");

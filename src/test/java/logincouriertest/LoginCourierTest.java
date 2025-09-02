@@ -1,10 +1,10 @@
 package logincouriertest;
 
 
-import couriertest.ApiConstants;
-import couriertest.CourierHelper;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import couriertest.ApiConstants;
+import couriertest.CourierHelper;
 import io.qameta.allure.Epic;
 import io.qameta.allure.Feature;
 import io.qameta.allure.Step;
@@ -14,6 +14,7 @@ import io.restassured.response.Response;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.*;
 
@@ -26,6 +27,9 @@ public class LoginCourierTest {
 
     private int courierId = -1; // Переменная для хранения ID курьера
     private couriertest.CourierHelper courierHelper = new CourierHelper(); // Экземпляр вспомогательного класса
+    private LoginHelper loginHelper = new LoginHelper(); // Экземпляр LoginHelper
+    private String login;
+    private String password;
 
     @After
     public void tearDown() {
@@ -34,7 +38,6 @@ public class LoginCourierTest {
             courierHelper.deleteCourier(courierId);  // Удаление курьера
         }
     }
-
 
     // С вынесенным URI в отдельный класс
     @Before
@@ -45,27 +48,6 @@ public class LoginCourierTest {
         password = "1234";
     }
 
-    @Step("Create courier with login: {login}, password: {password}, firstName: {firstName}")
-    public Response createCourier(String login, String password, String firstName) {
-        String body = "{ \"login\": \"" + login + "\", \"password\": \"" + password + "\", \"firstName\": \"" + firstName + "\" }";
-        return RestAssured.given()
-                .header("Content-Type", "application/json")
-                .body(body)
-                .when()
-                .post("/api/v1/courier");
-    }
-
-    @Step("Login courier with login: {login}, password: {password}")
-    public Response loginCourier(String login, String password) {
-        String body = "{ \"login\": \"" + login + "\", \"password\": \"" + password + "\" }";
-        return RestAssured.given()
-                .header("Content-Type", "application/json")
-                .body(body)
-                .when()
-                .post("/api/v1/courier/login");
-    }
-
-
     // Курьер может авторизоваться
     // Для авторизации нужно передать все обязательные поля
     // Успешный запрос возвращает id
@@ -74,12 +56,12 @@ public class LoginCourierTest {
     @Step("Create courier and verify login")
     public void testCourierCanBeCreatedAndLogin() {
 
-        Response createResponse = createCourier(login, password, "ivan");
+        Response createResponse = loginHelper.createCourier(login, password, "ivan");
         assertThat(createResponse.getStatusCode(), is(201));
 
         System.out.println("Курьер успешно создан. Код ответа: " + createResponse.getStatusCode());
         // Данные для авторизации
-        Response loginResponse = loginCourier(login, password);
+        Response loginResponse = loginHelper.loginCourier(login, password);
         assertThat(loginResponse.getStatusCode(), is(200));
         // Проверяем, что ответ содержит id
         assertThat(loginResponse.jsonPath().get("id"), is(notNullValue()));
@@ -97,9 +79,9 @@ public class LoginCourierTest {
     @DisplayName("Login with wrong login should fail")
     @Step("Test courier login with wrong login")
     public void testWithWrongLoginCourier() {
-        createCourier(login, password, "ivan");
+        loginHelper.createCourier(login, password, "ivan");
 
-        Response createResponse = loginCourier("wrongUser", password);
+        Response loginResponse = loginHelper.loginCourier("wrongUser", password);
 
         // Проверяем код ответа и сообщение
         assertThat(loginResponse.getStatusCode(), is(404));
@@ -109,13 +91,13 @@ public class LoginCourierTest {
         System.out.println("Response Code: " + loginResponse.getStatusCode());
         System.out.println("Response Body: " + loginResponse.asString());
 
-        // Тест: Неверный пароль
+        // Тест: Тест что система вернёт ошибку, если неправильно указать пароль
         @Test
         @DisplayName("Login with wrong password should fail")
         @Step("Test courier login with wrong password")
         public void testWithWrongPasswordCourier () {
-            createCourier(login, password, "ivan");
-            Response loginResponse = loginCourier(login, "wrongPassword");
+            loginHelper.createCourier(login, password, "ivan");
+            Response loginResponse = loginHelper.loginCourier(login, "wrongPassword");
 
             // Проверяем код ответа и сообщение
             assertThat(loginResponse.getStatusCode(), is(404));
@@ -136,15 +118,9 @@ public class LoginCourierTest {
         @DisplayName("Missing required fields returns error")
         @Step("Test missing login during courier login")
         public void testMissingLoginFieldsCourier () {
-            createCourier(login, password, "ivan");
-
-            String bodyWithoutLogin = "{ \"password\": \"1234\" }";
-            Response responseWithoutLogin = RestAssured.given()
-                    .header("Content-Type", "application/json")
-                    .body(bodyWithoutLogin)
-                    .when()
-                    .post("/api/v1/courier/login");
-            // Ожидаемое сообщение об ошибке
+            loginHelper.createCourier(login, password, "ivan");
+            Response responseWithoutLogin = loginHelper.loginCourierWithMissingLogin();
+                        // Ожидаемое сообщение об ошибке
             String expectedMessage = "Недостаточно данных для входа";
             // Проверяем код ответа и сообщение
             assertThat(responseWithoutLogin.getStatusCode(), is(400));
@@ -156,36 +132,14 @@ public class LoginCourierTest {
         @DisplayName("Missing password field returns error")
         @Step("Test missing password during courier login")
         public void testMissingPasswordFieldCourier () {
-            createCourier(login, password, "ivan");
-
-            String bodyWithoutPassword = "{ \"login\": \"ivanov\" }"; // Существующий логин
-            Response responseWithoutPassword = RestAssured.given()
-                    .header("Content-Type", "application/json")
-                    .body(bodyWithoutPassword)
-                    .when()
-                    .post("/api/v1/courier/login");
+            loginHelper.createCourier(login, password, "ivan");
+            Response responseWithoutPassword = loginHelper.loginCourierWithMissingPassword();
+            // Ожидаемое сообщение об ошибке
+            String expectedMessage = "Недостаточно данных для входа";
             // Проверяем код ответа и сообщение
             assertThat(responseWithoutPassword.getStatusCode(), is(400));
             assertThat(responseWithoutPassword.jsonPath().getString("message"), is(expectedMessage));
             System.out.println("Тест на отсутствие пароля. Код ответа: " + responseWithoutPassword.getStatusCode());
-        } finally{
-            // Проверяем, был ли курьер создан и авторизован
-            if (courierId != -1) {
-                // Удаляем курьера
-                Response deleteResponse = RestAssured.given()
-                        .header("Content-Type", "application/json")
-                        .when()
-                        .delete("/api/v1/courier/" + courierId);
-                // Проверяем код ответа на удаление курьера
-                if (deleteResponse.getStatusCode() == 200) {
-                    System.out.println("Курьер удален. Код ответа: " + deleteResponse.getStatusCode());
-                } else {
-                    System.err.println("Ошибка при удалении курьера. Код ответа: " + deleteResponse.getStatusCode());
-                    System.err.println("Тело ответа: " + deleteResponse.asString());
-                }
-            } else {
-                System.err.println("Ошибка: не удалось получить ID курьера, удаление невозможно.");
-            }
         }
     }
 

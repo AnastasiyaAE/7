@@ -1,4 +1,5 @@
 package couriertest;
+
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonElement;
@@ -6,11 +7,13 @@ import com.google.gson.JsonParser;
 import io.qameta.allure.Step;
 import io.restassured.RestAssured;
 import io.restassured.response.Response;
+
+import java.util.HashMap;
+import java.util.Map;
+
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.core.Is.is;
 import static org.hamcrest.core.IsNot.not;
-import java.util.HashMap;
-import java.util.Map;
 
 public class CourierHelper {
     private Gson gson;
@@ -38,7 +41,7 @@ public class CourierHelper {
         requestBody.put("password", password);
         requestBody.put("firstName", firstName);
         return requestBody;
-
+    }
     @Step("create courier")
     public Response createCourier(Map<String, String> body) {
         return RestAssured.given()
