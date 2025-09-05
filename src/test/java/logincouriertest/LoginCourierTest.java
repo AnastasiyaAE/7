@@ -3,13 +3,11 @@ package logincouriertest;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
-import couriertest.ApiConstants;
+import couriertest.BaseTest;
 import couriertest.CourierHelper;
 import io.qameta.allure.Epic;
 import io.qameta.allure.Feature;
-import io.qameta.allure.Step;
 import io.qameta.allure.junit4.DisplayName;
-import io.restassured.RestAssured;
 import io.restassured.response.Response;
 import org.junit.After;
 import org.junit.Before;
@@ -21,7 +19,7 @@ import static org.hamcrest.Matchers.*;
 
 @Epic("Courier Management")
 @Feature("Courier Login")
-public class LoginCourierTest {
+public class LoginCourierTest extends BaseTest {
 
     private Gson gson; // Создаем экземпляр Gson
 
@@ -42,8 +40,7 @@ public class LoginCourierTest {
     // С вынесенным URI в отдельный класс
     @Before
     public void setUp() {
-        RestAssured.baseURI = ApiConstants.BASE_URI;
-        gson = new GsonBuilder().setPrettyPrinting().create();
+       gson = new GsonBuilder().setPrettyPrinting().create();
         login = "ivanov";
         password = "1234";
     }
@@ -53,8 +50,7 @@ public class LoginCourierTest {
     // Успешный запрос возвращает id
     @Test
     @DisplayName("Courier can be created and login")
-    @Step("Create courier and verify login")
-    public void testCourierCanBeCreatedAndLogin() {
+       public void testCourierCanBeCreatedAndLogin() {
 
         Response createResponse = loginHelper.createCourier(login, password, "ivan");
         assertThat(createResponse.getStatusCode(), is(201));
@@ -77,8 +73,7 @@ public class LoginCourierTest {
     // Тест что система вернёт ошибку, если неправильно указать логин
     @Test
     @DisplayName("Login with wrong login should fail")
-    @Step("Test courier login with wrong login")
-    public void testWithWrongLoginCourier() {
+        public void testWithWrongLoginCourier() {
         loginHelper.createCourier(login, password, "ivan");
 
         Response loginResponse = loginHelper.loginCourier("wrongUser", password);
@@ -94,8 +89,7 @@ public class LoginCourierTest {
         // Тест: Тест что система вернёт ошибку, если неправильно указать пароль
         @Test
         @DisplayName("Login with wrong password should fail")
-        @Step("Test courier login with wrong password")
-        public void testWithWrongPasswordCourier () {
+                public void testWithWrongPasswordCourier () {
             loginHelper.createCourier(login, password, "ivan");
             Response loginResponse = loginHelper.loginCourier(login, "wrongPassword");
 
@@ -116,8 +110,7 @@ public class LoginCourierTest {
         // *Тест не проходит: при отсутствии поля password = баг*
         @Test
         @DisplayName("Missing required fields returns error")
-        @Step("Test missing login during courier login")
-        public void testMissingLoginFieldsCourier () {
+               public void testMissingLoginFieldsCourier () {
             loginHelper.createCourier(login, password, "ivan");
             Response responseWithoutLogin = loginHelper.loginCourierWithMissingLogin();
                         // Ожидаемое сообщение об ошибке
@@ -130,7 +123,6 @@ public class LoginCourierTest {
         // Тест 2: Отсутствует поле "password"
         @Test
         @DisplayName("Missing password field returns error")
-        @Step("Test missing password during courier login")
         public void testMissingPasswordFieldCourier () {
             loginHelper.createCourier(login, password, "ivan");
             Response responseWithoutPassword = loginHelper.loginCourierWithMissingPassword();

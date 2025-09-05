@@ -3,11 +3,9 @@ package couriertest;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import io.qameta.allure.*;
-import io.restassured.RestAssured;
 import io.restassured.response.Response;
 import org.junit.After;
 import org.junit.Before;
-import org.junit.BeforeClass;
 import org.junit.Test;
 
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -16,19 +14,14 @@ import static org.hamcrest.Matchers.not;
 
 @Epic("Courier Management")
 @Feature("Courier Creation")
-public class CourierTest {
+public class CourierTest extends BaseTest {
 
     private Gson gson;
 
     private int courierId = -1;
     private CourierHelper courierHelper = new CourierHelper();
 
-    @BeforeClass
-    public static void globalSetup() {
-        RestAssured.baseURI = ApiConstants.BASE_URI;
-    }
-
-    @After
+       @After
     public void tearDown() {
 
         if (courierId != -1) {
